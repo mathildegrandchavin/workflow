@@ -193,9 +193,8 @@ sp = "Galium verum"
 	envsmesoCrop<-raster::crop(envsmeso,StudyAreaPoly)
 
 	#mask environmental variables and take a random sample of background values 
-	#there is too much NA values so we calculate the mean 
-	envsna<-mean(envsmesoCrop)
-	envsmesoMask<-raster::mask(envsna,p)
+	
+	envsmesoMask<-raster::mask(envsmesoCrop,p)
 	#envsmesoMask<-raster::mask(envsmesoCrop,StudyAreaPoly)
 
 	bg.xy<-dismo::randomPoints(envsmesoMask,n=50000, tryf=10)
@@ -203,7 +202,7 @@ sp = "Galium verum"
 	#convert matrix output to data frame
 	
 	bg.xy<-as.data.frame(bg.xy)
-	colnames(bg.xy)<-c("x","y")
+	
 
 	#partition occurrence data
 	
@@ -216,9 +215,9 @@ sp = "Galium verum"
 
 	
 	occs.grp<-group.data[[1]]
-  str(occs.grp)
+
 	bg.grp<-group.data[[2]]
-	str(bg.grp)
+
 	
 	#build MaxEnt Model
 
@@ -240,7 +239,9 @@ sp = "Galium verum"
 	colnames(bg.xy) <- c("x", "y")
 	colnames(occs.xy) <- c("x", "y")
 	e<-ENMeval::ENMevaluate(occ=occs.xy,env=envsmesoMask,bg.coords=bg.xy,RMvalues=rms,fc="L",method="user",occ.grp=occs.grp,bg.grp=bg.grp,clamp=TRUE,algorithm="maxnet")
-
+  f<-dismo::maxent(envsmeso, occs.xy,bg.xy)
+  
+  
 	#unpack the results data frame the list of models, and the rasterstack of raw predictions
 	evaltbl<-e@results
 	evalMods<-e@models
