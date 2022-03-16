@@ -10,6 +10,7 @@ library(raster)
 library(countrycode)
 library(rnaturalearthdata)
 library(CoordinateCleaner)
+library(rJava)
 
 setwd ("D:/quercus/Utilisateurs/mgrandchavin")
 
@@ -67,6 +68,9 @@ allSp =  pull(allOcc,species) %>% unique
 #create a directory for all species
 pathOutput = paste0(getwd(),'/species')
 dir.create (pathOutput)
+
+#download maxent.jar and place the file in the desired folder
+utils::download.file(url="https://raw.githubusercontent.com/mrmaxent/Maxent/master/ArchivedReleases/3.3.3k/maxent.jar",destfile=paste0(system.file("java",package="dismo"),"/maxent.jar"),mode="wb")
 
 
 
@@ -195,6 +199,11 @@ sp = "Galium verum"
 	#mask environmental variables and take a random sample of background values 
 	
 	envsmesoMask<-raster::mask(envsmesoCrop,p)
+	
+	
+	#write raster
+	writeRaster(envsmesoMask,filename=paste0(sp_dir,names(envsmesoMask),".asc"),format="ascii",bylayer=TRUE,overwrite=T)
+	
 	#envsmesoMask<-raster::mask(envsmesoCrop,StudyAreaPoly)
 
 	bg.xy<-dismo::randomPoints(envsmesoMask,n=50000, tryf=10)
@@ -239,18 +248,20 @@ sp = "Galium verum"
 	colnames(bg.xy) <- c("x", "y")
 	colnames(occs.xy) <- c("x", "y")
 	e<-ENMeval::ENMevaluate(occ=occs.xy,env=envsmesoMask,bg.coords=bg.xy,RMvalues=rms,fc="L",method="user",occ.grp=occs.grp,bg.grp=bg.grp,clamp=TRUE,algorithm="maxnet")
-  f<-dismo::maxent(envsmeso, occs.xy,bg.xy)
   
+	#
+  
+  #try SDM with maxent directly
+	f<-dismo::maxent(x=envsmesoMask, p=occs.xy,a=bg.xy,path=paste0(sp_dir,"/","MaxEntOutput"),args=c("responsecurves"))
   
 	#unpack the results data frame the list of models, and the rasterstack of raw predictions
-	evaltbl<-e@results
-	evalMods<-e@models
-	names(evalMods)<-e@tune.settings$tune.args
-	evalPreds<-e@predictions
+	evaltbl<-f@results
+	
+	pred1<-predict(f,envsmesoMask)
 
 	#view ENMeval results
 
-	ENMeval::evalplot.stats(e,stats="auc.val","rm","fc")
+	ENMeval::evalplot.stats(f,stats="auc.val","rm","fc")
 
 	#select model from the list
 	mod<-evalMods[["rm.1_fc.L"]]
